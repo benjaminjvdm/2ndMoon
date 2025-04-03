@@ -26,24 +26,39 @@ def inject_custom_css():
             float: left;
             clear: both;
         }
+        .stTextInput > div > div > input {
+            width: 100%;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-st.title("2ndMoon: Personalized Q&A")
+st.title("2ndMoon🌙")
 
 inject_custom_css()
 
-question = st.text_input("Ask me anything:")
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-if question:
-    st.markdown(f'<div class="user-message">{question}</div>', unsafe_allow_html=True)
-    if question.lower() in knowledge_base:
-        response = knowledge_base[question.lower()]
+for message in st.session_state.messages[-10:]:
+    if message["role"] == "user":
+        st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
     else:
-        try:
-            response = model.generate_content(prompt + question).text
-        except Exception as e:
-            response = f"I'm sorry, I encountered an error while trying to answer that question: {e}"
-    st.markdown(f'<div class="response-message">{response}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="response-message">{message["content"]}</div>', unsafe_allow_html=True)
+
+with st.form(key='my_form', clear_on_submit=True):
+    question = st.text_input("", placeholder="Ask me anything:", key="question")
+    submitted = st.form_submit_button("Send")
+
+    if submitted:
+        st.session_state.messages.append({"role": "user", "content": question})
+        if question.lower() in knowledge_base:
+            response = knowledge_base[question.lower()]
+        else:
+            try:
+                response = model.generate_content(prompt + question).text
+            except Exception as e:
+                response = f"I'm sorry, I encountered an error while trying to answer that question: {e}"
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.rerun()
